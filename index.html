@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SQBOT</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#03060e;color:#d8eaf8;font-family:'Courier New',monospace;font-size:12px}
+#header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid rgba(0,229,255,0.15);position:sticky;top:0;z-index:100;background:#03060e}
+.logo{font-size:16px;font-weight:700;color:#00e5ff;letter-spacing:3px}
+.badge{font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(255,179,0,0.12);color:#ffb300;border:1px solid rgba(255,179,0,0.25)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot.on{background:#00ff88;animation:pulse 1.5s infinite}
+.dot.off{background:#ff3d6b}
+.dot.idle{background:#4a6278}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.2;transform:scale(2)}}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+#body{display:grid;grid-template-columns:220px 1fr;gap:10px;padding:10px;max-width:1400px;margin:0 auto}
+#sidebar{display:flex;flex-direction:column;gap:8px}
+.card{background:#070d18;border:1px solid rgba(255,255,255,0.07);border-radius:10px}
+.card-head{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.07);font-size:9px;font-weight:700;color:#00e5ff;letter-spacing:2px}
+.card-body{padding:10px 12px}
+.lbl{font-size:9px;color:#4a6278;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;display:flex;justify-content:space-between}
+input[type=text],input[type=password],input[type=number]{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:5px;color:#d8eaf8;font-family:'Courier New',monospace;font-size:11px;padding:6px 8px;outline:none;margin-bottom:7px}
+input[type=range]{width:100%;accent-color:#00e5ff;margin-bottom:8px}
+.btn{width:100%;padding:8px;border-radius:7px;border:none;font-family:'Courier New',monospace;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:1px;margin-bottom:6px}
+.btn-primary{background:linear-gradient(135deg,#00e5ff,#0077ff);color:#03060e}
+.btn-green{background:linear-gradient(135deg,#00ff88,#00cc55);color:#03060e}
+.btn-danger{background:linear-gradient(135deg,#ff3d6b,#cc1133);color:#fff}
+.btn-ghost{background:rgba(255,255,255,0.04);color:#4a6278;border:1px solid rgba(255,255,255,0.08)}
+#tabs{display:flex;gap:2px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:8px}
+.tab-btn{padding:7px 12px;border:none;background:transparent;color:#4a6278;font-family:'Courier New',monospace;font-size:10px;cursor:pointer;border-bottom:2px solid transparent}
+.tab-btn.active{color:#00e5ff;background:rgba(0,229,255,0.08);border-bottom-color:#00e5ff}
+.tab-cnt{display:none}.tab-cnt.active{display:block}
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{padding:6px 10px;text-align:left;color:#4a6278;font-weight:500;font-size:9px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.tbl td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.03)}
+.tag{font-size:9px;padding:2px 6px;border-radius:5px}
+.heat-bar{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;min-width:50px}
+.heat-fill{height:100%;border-radius:2px;transition:width .6s}
+#log-box{background:#010408;border-radius:7px;padding:10px;height:440px;overflow-y:auto;border:1px solid rgba(255,255,255,0.05);font-size:10px;line-height:1.9}
+.alert-item{padding:5px 8px;margin-bottom:5px;border-radius:5px;font-size:10px}
+.al-success{background:rgba(0,255,136,0.07);border-left:2px solid #00ff88}
+.al-error{background:rgba(255,61,107,0.07);border-left:2px solid #ff3d6b}
+.al-warning{background:rgba(255,179,0,0.07);border-left:2px solid #ffb300}
+.al-info{background:rgba(255,255,255,0.03);border-left:2px solid #4a6278}
+.post-item{padding:9px 11px;border-radius:7px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);margin-bottom:7px}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.stat-box{background:#0b1220;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:10px 12px}
+.stat-val{font-size:20px;font-weight:700;line-height:1}
+.stat-lbl{font-size:9px;color:#4a6278;margin-top:2px}
+#toast{position:fixed;top:16px;right:16px;z-index:9000;padding:10px 16px;border-radius:9px;font-size:11px;max-width:300px;display:none;animation:slideIn .3s ease}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#1a2a3a;border-radius:2px}
+@media(max-width:600px){#body{grid-template-columns:1fr}#sidebar{display:none}}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div id="header">
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="logo">⬡ SQBOT</span>
+    <span class="badge">模擬測試版</span>
+    <span id="ws-badge" style="font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(255,61,107,0.1);color:#ff3d6b;border:1px solid rgba(255,61,107,0.2)">WS未連接</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="dot off" id="dot-api"></span><span id="lbl-api" style="color:#ff3d6b">未連接</span></span>
+    <span style="display:flex;align-items:center;gap:4px;font-size:11px"><span class="dot idle" id="dot-bot"></span><span id="lbl-bot" style="color:#4a6278">待機</span></span>
+    <span id="hdr-pnl" style="font-size:13px;font-weight:700;color:#00ff88">+0.00 USDT</span>
+    <span style="font-size:11px;color:#4a6278">餘額:<span id="hdr-bal" style="color:#d8eaf8">1000.00</span>U</span>
+  </div>
+</div>
+<div id="body">
+<div id="sidebar">
+  <div class="card">
+    <div class="card-head">◈ API連接</div>
+    <div class="card-body">
+      <div class="lbl">API Key</div>
+      <input type="text" id="inp-key" value="TEST_KEY"/>
+      <div class="lbl">API Secret</div>
+      <input type="password" id="inp-secret" value="TEST_SECRET"/>
+      <button class="btn btn-primary" id="btn-conn" onclick="handleConnect()">連接（模擬）</button>
+      <button class="btn btn-ghost" id="btn-disc" onclick="handleDisconnect()" style="display:none">斷開連接</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head">◈ 機器人控制</div>
+    <div class="card-body">
+      <div class="lbl">掃描間隔(秒)<span id="v-scan" style="color:#00e5ff">15</span></div>
+      <input type="range" min="5" max="120" step="5" value="15" oninput="document.getElementById('v-scan').textContent=this.value" id="rng-scan"/>
+      <div class="lbl">熱度閾值(次)<span id="v-heat" style="color:#ffb300">5</span></div>
+      <input type="range" min="1" max="30" value="5" oninput="document.getElementById('v-heat').textContent=this.value" id="rng-heat"/>
+      <div class="lbl">成交量倍率<span id="v-vol" style="color:#ff7c2a">1.5</span></div>
+      <input type="range" min="1.0" max="5.0" step="0.1" value="1.5" oninput="document.getElementById('v-vol').textContent=parseFloat(this.value).toFixed(1)" id="rng-vol"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:7px">
+        <div><div class="lbl">止盈%</div><input type="number" id="inp-tp" value="3" step="0.5" style="color:#00ff88"/></div>
+        <div><div class="lbl">止損%</div><input type="number" id="inp-sl" value="1.5" step="0.5" style="color:#ff3d6b"/></div>
+      </div>
+      <div class="lbl">每筆金額(USDT)</div>
+      <input type="number" id="inp-size" value="20" step="5"/>
+      <button class="btn btn-ghost" style="font-size:9px;padding:5px" onclick="handleSaveConfig()">⚙ 儲存設定</button>
+      <button class="btn btn-green" id="btn-start" onclick="handleStart()">▶ 啟動機器人</button>
+      <button class="btn btn-danger" id="btn-stop" onclick="handleStop()" style="display:none">⏹ 停止機器人</button>
+      <button class="btn btn-ghost" style="font-size:9px;padding:5px" onclick="handleManualScan()">↻ 手動掃描</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head">◈ 統計</div>
+    <div class="card-body">
+      <table style="width:100%;font-size:11px">
+        <tr><td style="color:#4a6278;padding:3px 0">掃描次數</td><td style="text-align:right;font-weight:700" id="st-scans">0</td></tr>
+        <tr><td style="color:#4a6278;padding:3px 0">總交易</td><td style="text-align:right;font-weight:700" id="st-trades">0</td></tr>
+        <tr><td style="color:#4a6278;padding:3px 0">持倉中</td><td style="text-align:right;font-weight:700;color:#ffb300" id="st-pos">0</td></tr>
+        <tr><td style="color:#4a6278;padding:3px 0">餘額</td><td style="text-align:right;font-weight:700" id="st-bal">1000.00U</td></tr>
+        <tr><td style="color:#4a6278;padding:3px 0">總PnL</td><td style="text-align:right;font-weight:700" id="st-pnl">+0.00U</td></tr>
+      </table>
+      <button class="btn btn-ghost" style="margin-top:6px;font-size:9px;padding:5px;color:#ff3d6b;border-color:rgba(255,61,107,0.2)" onclick="handleReset()">🔄 重置數據</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head">◈ 即時警報</div>
+    <div class="card-body" style="padding:8px">
+      <div id="alert-list" style="max-height:180px;overflow-y:auto"><div style="color:#2a3a4a;font-size:10px">暫無警報</div></div>
+    </div>
+  </div>
+</div>
+<div id="main">
+  <div id="tabs">
+    <button class="tab-btn active" onclick="switchTab('monitor',this)">📡 熱度監控</button>
+    <button class="tab-btn" onclick="switchTab('positions',this)">📌 持倉中</button>
+    <button class="tab-btn" onclick="switchTab('trades',this)">📋 交易記錄</button>
+    <button class="tab-btn" onclick="switchTab('posts',this)">💬 帖文流</button>
+    <button class="tab-btn" onclick="switchTab('logs',this)">🖥 日誌</button>
+  </div>
+  <div class="tab-cnt active" id="tab-monitor">
+    <div class="stat-row">
+      <div class="stat-box"><div class="stat-val" style="color:#00e5ff" id="sb-t">15</div><div class="stat-lbl">監控幣種</div></div>
+      <div class="stat-box"><div class="stat-val" style="color:#ffb300" id="sb-h">0</div><div class="stat-lbl">熱度觸發</div></div>
+      <div class="stat-box"><div class="stat-val" style="color:#ff3d6b" id="sb-s">0</div><div class="stat-lbl">🔥信號</div></div>
+      <div class="stat-box"><div class="stat-val" style="color:#ff7c2a" id="sb-p">0</div><div class="stat-lbl">持倉中</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head">◈ 幣種熱度排行 <span style="color:#2a3a4a;font-weight:normal">5分鐘滑動窗口</span></div>
+      <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>幣種</th><th>熱度</th><th>情緒</th><th>價格</th><th>漲跌</th><th>成交量比</th><th>狀態</th></tr></thead><tbody id="heat-body"><tr><td colspan="7" style="padding:30px;text-align:center;color:#2a3a4a">等待數據...</td></tr></tbody></table></div>
+    </div>
+  </div>
+  <div class="tab-cnt" id="tab-positions">
+    <div class="card"><div class="card-head">◈ 持倉中</div><div id="pos-container"><div style="padding:30px;text-align:center;color:#2a3a4a">目前無持倉</div></div></div>
+  </div>
+  <div class="tab-cnt" id="tab-trades">
+    <div class="card"><div class="card-head">◈ 交易記錄</div><div id="trades-container"><div style="padding:30px;text-align:center;color:#2a3a4a">尚無交易</div></div></div>
+  </div>
+  <div class="tab-cnt" id="tab-posts">
+    <div class="card"><div class="card-head">◈ 帖文流</div><div class="card-body"><div id="posts-list" style="max-height:500px;overflow-y:auto"><div style="color:#2a3a4a;text-align:center;padding:20px">尚無帖文</div></div></div></div>
+  </div>
+  <div class="tab-cnt" id="tab-logs">
+    <div class="card"><div class="card-head">◈ 系統日誌</div><div class="card-body"><div id="log-box"><div style="color:#3a6a9a">[系統] 等待後端連接...</div></div></div></div>
+  </div>
+</div>
+</div>
+<footer style="text-align:center;padding:10px;border-top:1px solid rgba(255,255,255,0.04);color:#1a2a3a;font-size:9px">⚠ 模擬測試版 · 不涉及真實資金</footer>
+<script>
+const IS_REPLIT=window.location.hostname.includes('replit')||window.location.hostname.includes('repl.co');
+const API=IS_REPLIT?'':'http://localhost:8000';
+const WS_HOST=IS_REPLIT?window.location.host:'localhost:8000';
+const WS_PROTO=IS_REPLIT?'wss':'ws';
+let ws=null,sparkData={};
+
+async function apiFetch(path,opts={}){
+  const res=await fetch(API+path,{headers:{'Content-Type':'application/json'},...opts});
+  if(!res.ok){const e=await res.json().catch(()=>({detail:res.statusText}));throw new Error(e.detail||res.statusText);}
+  return res.json();
+}
+function showToast(msg,type='info'){
+  const t=document.getElementById('toast');
+  const c={success:'rgba(0,255,136,0.15)',error:'rgba(255,61,107,0.15)',warning:'rgba(255,179,0,0.15)',info:'rgba(255,255,255,0.08)'};
+  const b={success:'#00ff88',error:'#ff3d6b',warning:'#ffb300',info:'#4a6278'};
+  t.style.cssText=`display:block;background:${c[type]};border:1px solid ${b[type]};color:#d8eaf8;box-shadow:0 4px 20px rgba(0,0,0,0.6)`;
+  t.textContent=msg;clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',3000);
+}
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-cnt').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');
+}
+function fmtP(p){if(!p&&p!==0)return'—';if(p<0.001)return p.toFixed(7);if(p<1)return p.toFixed(5);return p.toFixed(2);}
+function fmtPnl(v){return(v>=0?'+':'')+v.toFixed(2);}
+
+function applyState(data){
+  if(data.connected!==undefined)updConn(data.connected);
+  if(data.running!==undefined)updBot(data.running);
+  if(data.pnl!==undefined){const e=document.getElementById('hdr-pnl'),s=document.getElementById('st-pnl');e.style.color=s.style.color=data.pnl>=0?'#00ff88':'#ff3d6b';e.textContent=fmtPnl(data.pnl)+' USDT';s.textContent=fmtPnl(data.pnl)+'U';}
+  if(data.balance!==undefined){document.getElementById('hdr-bal').textContent=data.balance.toFixed(2);const b=document.getElementById('st-bal');b.textContent=data.balance.toFixed(2)+'U';b.style.color=data.balance>1000?'#00ff88':data.balance<800?'#ff3d6b':'#d8eaf8';}
+  if(data.logs)renderLogs(data.logs);
+  if(data.alerts)renderAlerts(data.alerts);
+  if(data.trades)renderTrades(data.trades);
+  if(data.posts)renderPosts(data.posts);
+  if(data.open_positions)renderPositions(data.open_positions);
+  if(data.heat_data)renderHeat(data.heat_data);
+  if(data.scan_count!==undefined)document.getElementById('st-scans').textContent=data.scan_count;
+}
+function updConn(c){
+  document.getElementById('dot-api').className='dot '+(c?'on':'off');
+  document.getElementById('lbl-api').textContent=c?'已連接':'未連接';
+  document.getElementById('lbl-api').style.color=c?'#00ff88':'#ff3d6b';
+  document.getElementById('btn-conn').style.display=c?'none':'block';
+  document.getElementById('btn-disc').style.display=c?'block':'none';
+  document.getElementById('inp-key').disabled=c;document.getElementById('inp-secret').disabled=c;
+}
+function updBot(r){
+  document.getElementById('dot-bot').className='dot '+(r?'on':'idle');
+  document.getElementById('lbl-bot').textContent=r?'運行中':'待機';
+  document.getElementById('lbl-bot').style.color=r?'#00ff88':'#4a6278';
+  document.getElementById('btn-start').style.display=r?'none':'block';
+  document.getElementById('btn-stop').style.display=r?'block':'none';
+}
+function renderHeat(data){
+  const maxM=Math.max(...data.map(d=>d.mentions),1);
+  document.getElementById('sb-h').textContent=data.filter(d=>d.isHot).length;
+  document.getElementById('sb-s').textContent=data.filter(d=>d.isSignal).length;
+  document.getElementById('sb-p').textContent=(window._openPos||[]).length;
+  document.getElementById('st-trades').textContent=window._tradeCount||0;
+  let html='';
+  data.forEach(d=>{
+    const bc=d.mentions>=10?'#ff3d6b':d.mentions>=5?'#ffb300':'#1a4a3a';
+    const bp=Math.min((d.mentions/maxM)*100,100);
+    const sc=d.sentiment>0.3?'#00ff88':d.sentiment<-0.3?'#ff3d6b':'#ffb300';
+    const sl=d.sentiment>0.3?'看漲':d.sentiment<-0.3?'看跌':'中性';
+    const pc=d.priceChange>=0?'#00ff88':'#ff3d6b';
+    const vc=d.volumeRatio>=parseFloat(document.getElementById('rng-vol').value)?'#ffb300':'#4a6278';
+    const st=d.isSignal?`<span class="tag" style="background:rgba(0,255,136,0.15);color:#00ff88;border:1px solid rgba(0,255,136,0.3)">🔥信號</span>`:d.isHot?`<span class="tag" style="background:rgba(255,179,0,0.12);color:#ffb300">熱門</span>`:`<span style="font-size:9px;color:#2a3a4a">監控中</span>`;
+    html+=`<tr style="${d.isSignal?'background:rgba(0,229,255,0.03)':''}">
+      <td><b style="color:${d.isSignal?'#00e5ff':'#d8eaf8'}">\$${d.ticker}</b></td>
+      <td><div style="color:${d.isHot?'#ffb300':'#4a6278'};margin-bottom:2px">${d.mentions}次</div><div class="heat-bar"><div class="heat-fill" style="width:${bp}%;background:${bc}"></div></div></td>
+      <td><span class="tag" style="background:${sc}22;color:${sc};border:1px solid ${sc}44">${sl}</span></td>
+      <td style="color:#8899aa">${fmtP(d.price)}</td>
+      <td style="color:${pc}">${d.priceChange>=0?'+':''}${(d.priceChange||0).toFixed(2)}%</td>
+      <td style="color:${vc}">${(d.volumeRatio||0).toFixed(2)}x</td>
+      <td>${st}</td>
+    </tr>`;
+  });
+  document.getElementById('heat-body').innerHTML=html||'<tr><td colspan="7" style="padding:20px;text-align:center;color:#2a3a4a">等待數據...</td></tr>';
+}
+function renderLogs(logs){
+  const b=document.getElementById('log-box');
+  b.innerHTML=logs.map(l=>{
+    const c=l.includes('✅')||l.includes('✓')?'#00ff88':l.includes('❌')?'#ff3d6b':l.includes('⚠')?'#ffb300':l.includes('🔥')?'#ff7c2a':l.includes('↻')?'#3a6a9a':l.includes('🤖')||l.includes('[系統]')?'#3399ff':'#4a6278';
+    return`<div style="color:${c};padding-bottom:1px">${l.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>`;
+  }).join('')||'<div style="color:#2a3a4a">等待日誌...</div>';
+}
+function renderAlerts(alerts){
+  if(!alerts.length)return;
+  document.getElementById('alert-list').innerHTML=alerts.map(a=>`<div class="alert-item al-${a.type||'info'}"><span style="color:#2a3a4a">${a.time} </span>${a.msg}</div>`).join('');
+}
+function renderTrades(trades){
+  window._tradeCount=trades.length;
+  if(!trades.length){document.getElementById('trades-container').innerHTML='<div style="padding:30px;text-align:center;color:#2a3a4a">尚無交易</div>';return;}
+  let html=`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>時間</th><th>幣種</th><th>方向</th><th>成交價</th><th>總額</th><th>止盈</th><th>止損</th><th>PnL</th><th>狀態</th></tr></thead><tbody>`;
+  trades.forEach((t,i)=>{
+    const sc=t.side==='BUY'?'#00ff88':'#ff3d6b';
+    const pnlH=t.pnl!==undefined?`<b style="color:${t.pnl>=0?'#00ff88':'#ff3d6b'}">${t.pnl>=0?'+':''}${t.pnl.toFixed(4)}U</b>`:`<span style="font-size:9px;color:#4a6278">持倉中</span>`;
+    html+=`<tr><td style="color:#4a6278">${t.time}</td><td><b>\$${t.ticker}</b></td><td><span class="tag" style="background:${sc}22;color:${sc};border:1px solid ${sc}44">${t.side}</span></td><td style="color:#8899aa">${fmtP(t.price)}</td><td>${(t.total||0).toFixed(2)}U</td><td style="color:#00ff88">${fmtP(t.tp)}</td><td style="color:#ff3d6b">${fmtP(t.sl)}</td><td>${pnlH}</td><td style="font-size:9px;color:${t.open===false?'#4a6278':'#00ff88'}">${t.open===false?'✓平倉':'●持倉'}</td></tr>`;
+  });
+  html+='</tbody></table></div>';
+  document.getElementById('trades-container').innerHTML=html;
+}
+function renderPositions(positions){
+  window._openPos=positions;
+  document.getElementById('st-pos').textContent=positions.length;
+  document.getElementById('sb-p').textContent=positions.length;
+  if(!positions.length){document.getElementById('pos-container').innerHTML='<div style="padding:30px;text-align:center;color:#2a3a4a">目前無持倉</div>';return;}
+  let html=`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>時間</th><th>幣種</th><th>買入價</th><th>數量</th><th>總額</th><th>止盈</th><th>止損</th></tr></thead><tbody>`;
+  positions.forEach(p=>{html+=`<tr><td style="color:#4a6278">${p.time}</td><td><b style="color:#00e5ff">\$${p.ticker}</b></td><td style="color:#8899aa">${fmtP(p.price)}</td><td style="color:#8899aa">${(p.qty||0).toFixed(6)}</td><td>${(p.total||0).toFixed(2)}U</td><td style="color:#00ff88">${fmtP(p.tp)}</td><td style="color:#ff3d6b">${fmtP(p.sl)}</td></tr>`;});
+  html+='</tbody></table></div>';
+  document.getElementById('pos-container').innerHTML=html;
+}
+function renderPosts(posts){
+  if(!posts.length){document.getElementById('posts-list').innerHTML='<div style="color:#2a3a4a;text-align:center;padding:20px">尚無帖文</div>';return;}
+  document.getElementById('posts-list').innerHTML=posts.map((p,i)=>{
+    const tags=(p.tickers||[]).map(t=>`<span class="tag" style="background:rgba(0,229,255,0.1);color:#00e5ff;border:1px solid rgba(0,229,255,0.2)">\$${t}</span>`).join('');
+    const sc=p.sentiment>0.3?'#00ff88':p.sentiment<-0.3?'#ff3d6b':'#ffb300';
+    const sl=p.sentiment>0.3?'看漲':p.sentiment<-0.3?'看跌':'中性';
+    return`<div class="post-item" style="${i===0?'animation:slideIn .3s ease':''}"><div style="display:flex;justify-content:space-between;margin-bottom:5px;flex-wrap:wrap;gap:4px"><div style="display:flex;gap:4px;flex-wrap:wrap">${tags}<span class="tag" style="background:${sc}22;color:${sc};border:1px solid ${sc}44">${sl}</span></div><span style="font-size:9px;color:#2a3a4a">♥${p.likes}·${p.time}</span></div><div style="color:#b8ccd8;line-height:1.6">${p.text}</div></div>`;
+  }).join('');
+}
+
+function connectWS(){
+  const b=document.getElementById('ws-badge');
+  b.style.cssText='font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(255,179,0,0.1);color:#ffb300;border:1px solid rgba(255,179,0,0.2)';b.textContent='WS連接中...';
+  try{
+    ws=new WebSocket(`${WS_PROTO}://${WS_HOST}/ws`);
+    ws.onopen=()=>{b.style.cssText='font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(0,255,136,0.1);color:#00ff88;border:1px solid rgba(0,255,136,0.2)';b.textContent='WS已連接';};
+    ws.onclose=()=>{b.style.cssText='font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(255,61,107,0.1);color:#ff3d6b;border:1px solid rgba(255,61,107,0.2)';b.textContent='WS未連接';setTimeout(connectWS,3000);};
+    ws.onmessage=(e)=>{const{event,data}=JSON.parse(e.data);if(event==='init'||event==='state_update')applyState(data);if(event==='new_trade')showToast(`🔥 BUY ${data.ticker} @ ${fmtP(data.price)}`,'success');if(event==='position_closed'){const s=data.pnl>=0?'+':'';showToast(`${data.result} ${data.ticker} ${s}${(data.pnl||0).toFixed(4)}U`,data.pnl>=0?'success':'error');}};
+  }catch(e){setTimeout(connectWS,3000);}
+}
+setInterval(async()=>{
+  if(ws&&ws.readyState===1){ws.send('ping');return;}
+  try{const s=await apiFetch('/api/status');applyState(s);}catch{}
+},5000);
+
+async function handleConnect(){try{await apiFetch('/api/connect',{method:'POST',body:JSON.stringify({api_key:document.getElementById('inp-key').value,api_secret:document.getElementById('inp-secret').value})});updConn(true);showToast('✓ 連接成功','success');}catch(e){showToast(e.message,'error');}}
+async function handleDisconnect(){try{await apiFetch('/api/disconnect',{method:'POST'});updConn(false);updBot(false);showToast('已斷開','info');}catch(e){showToast(e.message,'error');}}
+async function handleStart(){try{await apiFetch('/api/bot/start',{method:'POST'});updBot(true);showToast('🤖 機器人已啟動','success');}catch(e){showToast(e.message,'error');}}
+async function handleStop(){try{await apiFetch('/api/bot/stop',{method:'POST'});updBot(false);showToast('⏹ 已停止','info');}catch(e){showToast(e.message,'error');}}
+async function handleSaveConfig(){try{await apiFetch('/api/bot/config',{method:'PUT',body:JSON.stringify({scan_interval:parseInt(document.getElementById('rng-scan').value),heat_threshold:parseInt(document.getElementById('rng-heat').value),volume_ratio:parseFloat(document.getElementById('rng-vol').value),tp_pct:parseFloat(document.getElementById('inp-tp').value),sl_pct:parseFloat(document.getElementById('inp-sl').value),order_size:parseFloat(document.getElementById('inp-size').value)})});showToast('⚙ 設定已儲存','success');}catch(e){showToast(e.message,'error');}}
+async function handleManualScan(){try{await apiFetch('/api/scan/once',{method:'POST'});showToast('↻ 掃描完成','info');}catch(e){showToast(e.message,'error');}}
+async function handleReset(){if(!confirm('確定重置？資金恢復1000U'))return;try{await apiFetch('/api/reset',{method:'POST'});showToast('🔄 已重置','info');}catch(e){showToast(e.message,'error');}}
+connectWS();
+</script>
+</body>
+</html>
